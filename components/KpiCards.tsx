@@ -13,59 +13,67 @@ export function KpiCards({ kpis }: KpiCardsProps) {
   const { portfolioValue, totalPnL, totalPnLPercent, weeklyChange } = kpis
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Portfolio Value */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <Card className="hover:shadow-lg transition-all duration-200 border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Portfolio Value</CardTitle>
+          <DollarSign className="h-5 w-5 text-primary" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(portfolioValue)}</div>
+        <CardContent className="pt-0">
+          <div className="text-3xl font-bold tracking-tight">{formatCurrency(portfolioValue)}</div>
+          <div className="h-px bg-border/30 mt-4"></div>
         </CardContent>
       </Card>
 
-      {/* Total P/L */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total P/L vs Start</CardTitle>
+      <Card className="hover:shadow-lg transition-all duration-200 border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total P/L vs Start</CardTitle>
           {totalPnL >= 0 ? (
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-5 w-5 text-green-600" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-5 w-5 text-red-600" />
           )}
         </CardHeader>
-        <CardContent>
-          <div className={`text-2xl font-bold ${totalPnL >= 0 ? "text-green-600" : "text-red-600"}`}>
+        <CardContent className="pt-0">
+          <div className={`text-3xl font-bold tracking-tight ${totalPnL >= 0 ? "text-green-600" : "text-red-600"}`}>
             {formatCurrency(totalPnL)}
           </div>
-          <p className={`text-xs ${totalPnL >= 0 ? "text-green-600" : "text-red-600"}`}>
+          <p className={`text-sm font-medium mt-1 ${totalPnL >= 0 ? "text-green-600" : "text-red-600"}`}>
             {formatPercent(totalPnLPercent)}
           </p>
+          <div className="h-px bg-border/30 mt-4"></div>
         </CardContent>
       </Card>
 
-      {/* 1-Week Change */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">1-Week Change</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+      <Card className="hover:shadow-lg transition-all duration-200 border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle className="text-sm font-medium text-muted-foreground">1-Week Change</CardTitle>
+          <Calendar className="h-5 w-5 text-primary" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {weeklyChange !== null ? (
             <>
-              <div className={`text-2xl font-bold ${weeklyChange >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <div
+                className={`text-3xl font-bold tracking-tight ${weeklyChange >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
                 {formatPercent(weeklyChange)}
               </div>
-              {weeklyChange >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-green-600 mt-1" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-red-600 mt-1" />
-              )}
+              <div className="flex items-center mt-2">
+                {weeklyChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                )}
+                <span className="text-sm text-muted-foreground ml-2">vs last week</span>
+              </div>
             </>
           ) : (
-            <div className="text-2xl font-bold text-muted-foreground">–</div>
+            <>
+              <div className="text-3xl font-bold text-muted-foreground tracking-tight">–</div>
+              <p className="text-sm text-muted-foreground mt-2">Insufficient data</p>
+            </>
           )}
+          <div className="h-px bg-border/30 mt-4"></div>
         </CardContent>
       </Card>
     </div>

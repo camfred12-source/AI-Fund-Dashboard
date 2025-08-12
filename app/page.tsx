@@ -2,57 +2,44 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SettingsCard } from "@/components/SettingsCard"
 import { KpiCards } from "@/components/KpiCards"
 import { PerformanceChart } from "@/components/PerformanceChart"
 import { AllocationPie } from "@/components/AllocationPie"
 import { WeightsBar } from "@/components/WeightsBar"
 import { HoldingsTable } from "@/components/HoldingsTable"
-import { SetupCard } from "@/components/SetupCard"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Newspaper } from "lucide-react"
-import type { Position, HistoryEntry, DashboardSettings, KpiData } from "@/lib/types"
+import { Newspaper, Settings } from "lucide-react"
+import type { Position, HistoryEntry, KpiData } from "@/lib/types"
 import { parseCsv, findHeader } from "@/lib/parseCsv"
 import { parseNumber } from "@/lib/numberFormat"
 import { parseDate, getDaysAgo } from "@/lib/date"
 
-const DEFAULT_SETTINGS: DashboardSettings = {
-  positionsUrl: "",
-  historyUrl: "",
-  startingValue: 276.56,
-}
-
 export default function Dashboard() {
-  const [settings, setSettings] = useState<DashboardSettings>(DEFAULT_SETTINGS)
+  const [positionsUrl, setPositionsUrl] = useState("")
+  const [historyUrl, setHistoryUrl] = useState("")
+  const [startingValue, setStartingValue] = useState(276.56)
   const [positions, setPositions] = useState<Position[]>([])
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load settings from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("ai-fund-settings")
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed })
-      } catch (e) {
-        console.error("Failed to parse saved settings:", e)
+    if (typeof window !== "undefined") {
+      setPositionsUrl(localStorage.getItem("ai_positionsUrl") || "")
+      setHistoryUrl(localStorage.getItem("ai_historyUrl") || "")
+      const savedStartingValue = localStorage.getItem("ai_startingValue")
+      if (savedStartingValue) {
+        setStartingValue(Number.parseFloat(savedStartingValue) || 276.56)
       }
     }
   }, [])
 
-  // Save settings to localStorage
-  const saveSettings = useCallback((newSettings: DashboardSettings) => {
-    setSettings(newSettings)
-    localStorage.setItem("ai-fund-settings", JSON.stringify(newSettings))
-  }, [])
-
   // Fetch and parse CSV data
   const fetchData = useCallback(async () => {
-    if (!settings.positionsUrl && !settings.historyUrl) {
+    if (!positionsUrl && !historyUrl) {
       return
     }
 
@@ -62,17 +49,17 @@ export default function Dashboard() {
     try {
       const promises: Promise<any>[] = []
 
-      if (settings.positionsUrl) {
+      if (positionsUrl) {
         promises.push(
-          fetch(settings.positionsUrl, { cache: "no-store" })
+          fetch(positionsUrl, { cache: "no-store" })
             .then((res) => res.text())
             .then((text) => ({ type: "positions", data: text })),
         )
       }
 
-      if (settings.historyUrl) {
+      if (historyUrl) {
         promises.push(
-          fetch(settings.historyUrl, { cache: "no-store" })
+          fetch(historyUrl, { cache: "no-store" })
             .then((res) => res.text())
             .then((text) => ({ type: "history", data: text })),
         )
@@ -102,7 +89,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [settings.positionsUrl, settings.historyUrl])
+  }, [positionsUrl, historyUrl])
 
   // Parse positions CSV
   const parsePositions = (parsed: ReturnType<typeof parseCsv>): Position[] => {
@@ -175,8 +162,8 @@ export default function Dashboard() {
       portfolioValue = positions.reduce((sum, pos) => sum + pos.marketValue, 0)
     }
 
-    const totalPnL = portfolioValue - settings.startingValue
-    const totalPnLPercent = settings.startingValue > 0 ? (totalPnL / settings.startingValue) * 100 : 0
+    const totalPnL = portfolioValue - startingValue
+    const totalPnLPercent = startingValue > 0 ? (totalPnL / startingValue) * 100 : 0
 
     let weeklyChange: number | null = null
     if (history.length > 1) {
@@ -203,67 +190,82 @@ export default function Dashboard() {
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
-    if (settings.positionsUrl || settings.historyUrl) {
+    if (positionsUrl || historyUrl) {
       fetchData()
       const interval = setInterval(fetchData, 60000)
       return () => clearInterval(interval)
     }
-  }, [fetchData, settings.positionsUrl, settings.historyUrl])
+  }, [fetchData, positionsUrl, historyUrl])
 
   const kpis = calculateKpis()
+  const hasData = positionsUrl || historyUrl
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">AI Fund – Live</h1>
-          <p className="text-gray-600 mt-2">Real-time portfolio dashboard</p>
-          <div className="mt-4">
-            <Link href="/news">
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                <Newspaper className="h-4 w-4" />
-                Latest AI News
-              </Button>
-            </Link>
-          </div>
+    <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8">
+      {!hasData && (
+        <Alert className="border-primary/20 bg-primary/5">
+          <Settings className="h-4 w-4" />
+          <AlertDescription>
+            <span className="font-medium">No data configured.</span>{" "}
+            <Link href="/input-data" className="text-primary hover:underline font-medium">
+              Add your data links in Input Data
+            </Link>{" "}
+            to start tracking your portfolio.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="text-center space-y-4">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">AI Fund – Live</h1>
+          <p className="text-muted-foreground text-lg">Real-time portfolio dashboard</p>
         </div>
 
-        <SettingsCard
-          settings={settings}
-          onSave={saveSettings}
-          onRefresh={fetchData}
-          loading={loading}
-          lastUpdated={lastUpdated}
-          error={error}
-        />
-
-        <KpiCards kpis={kpis} />
-
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="allocation">Allocation</TabsTrigger>
-            <TabsTrigger value="holdings">Holdings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <PerformanceChart history={history} />
-          </TabsContent>
-
-          <TabsContent value="allocation" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AllocationPie positions={positions} />
-              <WeightsBar positions={positions} />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="holdings" className="space-y-6">
-            <HoldingsTable positions={positions} />
-          </TabsContent>
-        </Tabs>
-
-        <SetupCard />
+        <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+          {lastUpdated && <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>}
+          <Link href="/news">
+            <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+              <Newspaper className="h-4 w-4" />
+              Latest AI News
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {hasData && (
+        <>
+          <KpiCards kpis={kpis} />
+
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="allocation">Allocation</TabsTrigger>
+              <TabsTrigger value="holdings">Holdings</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              <PerformanceChart history={history} />
+            </TabsContent>
+
+            <TabsContent value="allocation" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AllocationPie positions={positions} />
+                <WeightsBar positions={positions} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="holdings" className="space-y-6">
+              <HoldingsTable positions={positions} />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }
